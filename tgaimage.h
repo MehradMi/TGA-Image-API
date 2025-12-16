@@ -41,6 +41,7 @@ struct TGAImage {
   void flip_vertically();
 
 private:
+  bool load_rle_data(std::ifstream &in);
   int w = 0, h = 0;
   std::uint8_t bpp = 0;
   std::vector<std::uint8_t> data = {}; // Why??

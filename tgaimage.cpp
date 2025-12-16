@@ -7,6 +7,8 @@
 
 const std::uint8_t RGB_IMAGE_TYPE_CODE = 2;
 const std::uint8_t GRAY_IMAGE_TYPE_CODE = 3;
+const std::uint8_t COMPRESSED_RGB_IMAGE_TYPE_CODE = 10;
+const std::uint8_t COMPRESSED_GRAY_IMAGE_TYPE_CODE = 11;
 
 TGAImage::TGAImage(const int w, const int h, const int bpp)
     : w(w), h(h), bpp(bpp), data(w * h * bpp, 0) {}
@@ -24,6 +26,7 @@ bool TGAImage::read_tga_file(const std::string filename) {
   }
 
   TGAHeader header;
+  // read from "in", and store it in &header.
   in.read(reinterpret_cast<char *>(&header), sizeof(header));
   // check quickly one more time to make sure
   // no errors has occured
@@ -50,5 +53,17 @@ bool TGAImage::read_tga_file(const std::string filename) {
       std::cerr << "An error occured while reading the data" << std::endl;
       return false;
     }
+  } else if (header.imagetypecode == COMPRESSED_RGB_IMAGE_TYPE_CODE ||
+             header.imagetypecode == COMPRESSED_GRAY_IMAGE_TYPE_CODE) {
+    if (!load_rle_data(in)) {
+      std::cerr << "An error occured while reading data" << std::endl;
+      return false;
+    }
+  } else {
+    std::cerr << "Unknown File Format" << static_cast<int>(header.imagetypecode)
+              << std::endl;
+    return false;
   }
+
+  return true;
 }
