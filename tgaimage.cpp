@@ -84,3 +84,19 @@ void TGAImage::flip_horizontally() {
     }
   }
 }
+
+void TGAImage::flip_vertically() {
+  for (int i{0}; i < w; i++) {
+    for (int j{0}; j < (h / 2); j++) {
+      int currentPixelIndex = i + (j * w);
+      int currentPixelByteOffset = currentPixelIndex * bpp;
+      int targetPixelIndex = i + ((h - 1 - j) * w);
+      int targetPixelByteOffset = targetPixelIndex * bpp;
+      for (int channelByteIndex{0}; channelByteIndex < bpp;
+           channelByteIndex++) {
+        std::swap(data[currentPixelIndex + channelByteIndex],
+                  data[targetPixelIndex + channelByteIndex]);
+      }
+    }
+  }
+}
