@@ -44,11 +44,11 @@ bool TGAImage::read_tga_file(const std::string filename) {
     return false;
   }
 
-  size_t numberOfBytes = bpp * w * h;
-  data = std::vector<std::uint8_t>(numberOfBytes, 0);
+  size_t numberOfBytesInImage = bpp * w * h;
+  data = std::vector<std::uint8_t>(numberOfBytesInImage, 0);
   if (header.imagetypecode == RGB_IMAGE_TYPE_CODE ||
       header.imagetypecode == GRAY_IMAGE_TYPE_CODE) {
-    in.read(reinterpret_cast<char *>(data.data()), numberOfBytes);
+    in.read(reinterpret_cast<char *>(data.data()), numberOfBytesInImage);
     if (!in.good()) {
       std::cerr << "An error occured while reading the data" << std::endl;
       return false;
@@ -66,4 +66,21 @@ bool TGAImage::read_tga_file(const std::string filename) {
   }
 
   return true;
+}
+
+void TGAImage::flip_horizontally() {
+  for (int i{0}; i < (w / 2); i++) {
+    for (int j{0}; j < h; j++) {
+      int currentPixelIndex = i + (j * w);
+      int currentPixelByteOffset = currentPixelIndex * bpp;
+      int targetPixelIndex = (w - 1 - i) + (j * w);
+      int targetPixelByteOffset = targetPixelIndex * bpp;
+
+      for (int channelByteIndex{0}; channelByteIndex < bpp;
+           channelByteIndex++) {
+        std::swap(data[currentPixelByteOffset + channelByteIndex],
+                  data[targetPixelByteOffset + channelByteIndex]);
+      }
+    }
+  }
 }

@@ -54,7 +54,15 @@ struct TGAImage {
 
 private:
   bool load_rle_data(std::ifstream &in);
+
+  // Both width (w) and height (h) are measured by "pixels" in this program
   int w = 0, h = 0;
+
+  // bpp: bytes per pixel
   std::uint8_t bpp = 0;
-  std::vector<std::uint8_t> data = {}; // Why??
+
+  // the "data" vector is meant to
+  // store the raw bytes of the entire image,
+  // sequentially, and pixel by pixel
+  std::vector<std::uint8_t> data = {};
 };
