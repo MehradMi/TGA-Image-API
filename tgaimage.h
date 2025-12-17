@@ -26,6 +26,18 @@ struct TGAHeader {
 };
 #pragma pack(pop)
 
+struct TGAColor {
+  // BGRA: Blue-Green-Red-Alpha
+  // Why not RGBA? Because TGA Stores Colors In BGRA Byte Order.
+  std::uint8_t bgra[4] = {0, 0, 0, 0};
+
+  // bytespp: bytes per pixel
+  std::uint8_t bytespp = 4;
+
+  // overloading the "[]" operator
+  std::uint8_t &operator[](const int i) { return bgra[i]; }
+};
+
 struct TGAImage {
   enum Format { GRAYSCALE = 1, RGB = 3, RGBA = 4 };
 
