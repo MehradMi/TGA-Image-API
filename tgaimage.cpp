@@ -3,6 +3,8 @@
 #include <fstream>
 #include <iostream>
 #include <istream>
+#include <ratio>
+#include <system_error>
 #include <vector>
 
 const std::uint8_t RGB_IMAGE_TYPE_CODE = 2;
@@ -64,6 +66,60 @@ bool TGAImage::read_tga_file(const std::string filename) {
               << std::endl;
     return false;
   }
+
+  return true;
+}
+
+bool TGAImage::load_rle_data(std::ifstream &in) {
+  size_t pixelCount = w * h;
+  size_t currentByte = 0;
+  size_t currentPixel = 0;
+  TGAColor colorBuffer;
+
+  do {
+    std::uint8_t chunkHeader = 0;
+    chunkHeader = in.get(); // Reading a single character of the "in" file
+                            // stream at a time
+    if (!in.good()) {
+      std::cerr << "An error occured while reading the data" << std::endl;
+      return false;
+    }
+    if (chunkHeader < 128) {
+      chunkHeader++;
+      for (int i{0}; i < chunkHeader; i++) {
+        in.read(reinterpret_cast<char *>(colorBuffer.bgra), bpp);
+        if (!in.good()) {
+          std::cerr << "An error occured while reading the header" << std::endl;
+          return false;
+        }
+        for (int t{0}; t < bpp; t++) {
+          data[currentByte++] = colorBuffer.bgra[t];
+        }
+        currentPixel++;
+        if (currentPixel > pixelCount) {
+          std::cerr << "Too many pixels read" << std::endl;
+          return false;
+        }
+      }
+    } else {
+      chunkHeader -= 127;
+      for (int i{0}; i < chunkHeader; i++) {
+        in.read(reinterpret_cast<char *>(colorBuffer.bgra), bpp);
+        if (!in.good()) {
+          std::cerr << "An error occured while reading the header" << std::endl;
+          return false;
+        }
+        for (int t{0}; t < bpp; t++) {
+          data[currentPixel++] = colorBuffer.bgra[t];
+        }
+        currentPixel++;
+        if (currentPixel > pixelCount) {
+          std::cerr << "Too many pixels read" << std::endl;
+          return false;
+        }
+      }
+    }
+  } while (currentPixel < pixelCount);
 
   return true;
 }

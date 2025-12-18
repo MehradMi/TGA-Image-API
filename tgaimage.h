@@ -52,6 +52,8 @@ struct TGAImage {
   void flip_horizontally();
   void flip_vertically();
 
+  TGAColor get(const int x, const int y) const;
+
 private:
   bool load_rle_data(std::ifstream &in);
 
@@ -63,6 +65,6 @@ private:
 
   // the "data" vector is meant to
   // store the raw bytes of the entire image,
-  // sequentially, and pixel by pixel
+  // sequentially,
   std::vector<std::uint8_t> data = {};
 };
