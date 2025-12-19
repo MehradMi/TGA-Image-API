@@ -1,10 +1,12 @@
 #include "tgaimage.h"
 #include <cstddef>
 #include <cstdint>
+#include <cstring>
 #include <fstream>
 #include <iostream>
 #include <istream>
 #include <ratio>
+#include <string>
 #include <system_error>
 #include <vector>
 
@@ -197,6 +199,62 @@ err:
   return false;
 }
 
+bool TGAImage::unload_rle_data(std::ofstream &out) const {
+  const std::uint8_t maxChunkLength = 128;
+  size_t entireImagePixelCount = w * h;
+  size_t currentPixel = 0;
+
+  // Process and unload each pixel until we are
+  // out of pixels in the image
+  while (currentPixel < entireImagePixelCount) {
+    size_t chunkStartPos = currentPixel * bpp;
+    size_t currentByte = currentPixel * bpp;
+    std::uint8_t runLength = 1;
+    bool isRawLiteral = true;
+
+    while (currentPixel + runLength < entireImagePixelCount &&
+           runLength < maxChunkLength) {
+      bool samePixels = true;
+      for (int t{0}; samePixels && t < bpp; t++) {
+        std::uint8_t currentPixelData = data[currentByte + t];
+        std::uint8_t nextPixelData = data[currentByte + t + bpp];
+        samePixels = (currentPixelData == nextPixelData);
+      }
+      currentByte += bpp;
+      if (runLength == 1)
+        isRawLiteral = !samePixels;
+      if (isRawLiteral && samePixels) {
+        runLength--;
+        break;
+      }
+      if (!isRawLiteral && !samePixels) {
+        break;
+      }
+      runLength++;
+    }
+    currentPixel += runLength;
+    out.put(isRawLiteral ? runLength - 1 : runLength + 127);
+    if (!out.good())
+      return false;
+    out.write(reinterpret_cast<const char *>(data.data() + chunkStartPos),
+              (isRawLiteral ? runLength * bpp : bpp));
+    if (!out.good())
+      return false;
+  }
+
+  return true;
+}
+
+TGAColor TGAImage::get(const int x, const int y) const {
+  if (!data.size() || x < 0 || y < 0 || x >= w || y >= h)
+    return {};
+  TGAColor ret = {0, 0, 0, 0, bpp};
+  const std::uint8_t *p = data.data() + (x + y * w) * bpp;
+  for (int i = bpp; i--; ret.bgra[i] = p[i])
+    ;
+  return ret;
+}
+
 void TGAImage::flip_horizontally() {
   for (int i{0}; i < (w / 2); i++) {
     for (int j{0}; j < h; j++) {
@@ -229,3 +287,13 @@ void TGAImage::flip_vertically() {
     }
   }
 }
+
+void TGAImage::set(const int x, const int y, const TGAColor &c) {
+  if (!data.size() || x < 0 || y < 0 || x >= w || y >= h)
+    return;
+  memcpy(data.data() + (x + y * w) * bpp, c.bgra, bpp);
+}
+
+int TGAImage::width() const { return w; }
+
+int TGAImage::height() const { return h; }

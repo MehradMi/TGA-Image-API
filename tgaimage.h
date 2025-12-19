@@ -77,6 +77,10 @@ struct TGAImage {
   void flip_vertically();
 
   TGAColor get(const int x, const int y) const;
+  void set(const int x, const int y, const TGAColor &c);
+
+  int width() const;
+  int height() const;
 
 private:
   bool load_rle_data(std::ifstream &in);
