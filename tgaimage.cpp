@@ -68,6 +68,12 @@ bool TGAImage::read_tga_file(const std::string filename) {
     return false;
   }
 
+  if (!(header.imagedescriptor & 0x20))
+    flip_vertically();
+  if (header.imagedescriptor & 0x10)
+    flip_horizontally();
+
+  std::cerr << w << "x" << h << "/" << bpp * 8 << std::endl;
   return true;
 }
 
@@ -138,6 +144,57 @@ bool TGAImage::load_rle_data(std::ifstream &in) {
   } while (currentPixel < entireImagePixelCount);
 
   return true;
+}
+
+bool TGAImage::write_tga_file(const std::string filename, const bool vflip,
+                              const bool rle) const {
+  TGAFooter footer;
+  std::ofstream out;
+  out.open(filename, std::ios::binary);
+  if (!out.is_open()) {
+    std::cerr << "Can't open file " << filename << std::endl;
+    return false;
+  }
+  TGAHeader header = {};
+  header.bitsperpixel = bpp << 3;
+  header.width = w;
+  header.height = h;
+  header.imagetypecode =
+      (bpp == GRAYSCALE
+           ? (rle ? COMPRESSED_GRAY_IMAGE_TYPE_CODE : GRAY_IMAGE_TYPE_CODE)
+           : (rle ? COMPRESSED_RGB_IMAGE_TYPE_CODE : RGB_IMAGE_TYPE_CODE));
+  header.imagedescriptor =
+      vflip ? 0x00 : 0x20; // top-left or bottom-left origin
+
+  out.write(reinterpret_cast<const char *>(&header), sizeof(header));
+  if (!out.good())
+    goto err;
+  if (!rle) {
+    out.write(reinterpret_cast<const char *>(data.data()), w * h * bpp);
+    if (!out.good())
+      goto err;
+  } else if (!unload_rle_data(out))
+    goto err;
+
+  out.write(reinterpret_cast<const char *>(footer.developer_area_ref),
+            sizeof footer.developer_area_ref);
+  if (!out.good())
+    goto err;
+
+  out.write(reinterpret_cast<const char *>(footer.extension_area_ref),
+            sizeof footer.extension_area_ref);
+  if (!out.good())
+    goto err;
+
+  out.write(reinterpret_cast<const char *>(footer.signature),
+            sizeof footer.signature);
+  if (!out.good())
+    goto err;
+
+  return true;
+err:
+  std::cerr << "Can't dump the TGA file" << std::endl;
+  return false;
 }
 
 void TGAImage::flip_horizontally() {

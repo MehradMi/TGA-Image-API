@@ -33,8 +33,20 @@ struct TGAHeader {
   std::uint16_t width = 0;          // Image width in pixels
   std::uint16_t height = 0;         // Image height in pixels
   std::uint8_t bitsperpixel = 0;    // Images bits per pixel 8, 16, 24, 32
-  std::uint8_t imagedescriptor = 0; // Image descriptor bits (vh flip bits)
+  std::uint8_t imagedescriptor = 0; // Image descriptor bits (vh flip bits) ->
+                                    // Determines Image Origin/Orientation
+
   // =====
+};
+#pragma pack(pop)
+
+#pragma pack(push, 1)
+struct TGAFooter {
+  static constexpr std::uint8_t developer_area_ref[4] = {0, 0, 0, 0};
+  static constexpr std::uint8_t extension_area_ref[4] = {0, 0, 0, 0};
+  static constexpr std::uint8_t signature[18] = {'T', 'R', 'U', 'E', 'V', 'I',
+                                                 'S', 'I', 'O', 'N', '-', 'X',
+                                                 'F', 'I', 'L', 'E', '.', '\0'};
 };
 #pragma pack(pop)
 
@@ -68,6 +80,7 @@ struct TGAImage {
 
 private:
   bool load_rle_data(std::ifstream &in);
+  bool unload_rle_data(std::ofstream &out) const;
 
   // Both width (w) and height (h) are measured by "pixels" in this program
   int w = 0, h = 0;
