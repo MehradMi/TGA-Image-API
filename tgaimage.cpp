@@ -1,4 +1,5 @@
 #include "tgaimage.h"
+#include <cstddef>
 #include <cstdint>
 #include <fstream>
 #include <iostream>
@@ -71,55 +72,70 @@ bool TGAImage::read_tga_file(const std::string filename) {
 }
 
 bool TGAImage::load_rle_data(std::ifstream &in) {
-  size_t pixelCount = w * h;
-  size_t currentByte = 0;
+  size_t entireImagePixelCount = w * h;
   size_t currentPixel = 0;
+  size_t currentByte = 0;
   TGAColor colorBuffer;
 
   do {
-    std::uint8_t chunkHeader = 0;
-    chunkHeader = in.get(); // Reading a single character of the "in" file
-                            // stream at a time
+    std::uint8_t runCount = 0;
+    runCount = in.get(); // Read a single character (one byte) from the
+                         // input file stream at a time
     if (!in.good()) {
-      std::cerr << "An error occured while reading the data" << std::endl;
+      std::cerr << "Ar error occured while reading the data" << std::endl;
       return false;
     }
-    if (chunkHeader < 128) {
-      chunkHeader++;
-      for (int i{0}; i < chunkHeader; i++) {
+
+    // if runCount is less than 128, it means
+    // that the most significant bit (bit-7) was set to 0
+    // and that indicates a "literal run". However, if it is greater
+    // than 128, then it means the bit-7 was set to 1, to indicate
+    // an "encoded run".
+    if (runCount < 128) {
+      runCount++;
+      for (int i{0}; i < runCount; i++) {
         in.read(reinterpret_cast<char *>(colorBuffer.bgra), bpp);
         if (!in.good()) {
-          std::cerr << "An error occured while reading the header" << std::endl;
+          std::cerr << "An error occured while reading the RLE run"
+                    << std::endl;
           return false;
         }
+        // Now, take the values stored in the colorBuffer
+        // and put them in the "data" vector contiguously
+        // as this has the effect of forming the image with
+        // correct colors
         for (int t{0}; t < bpp; t++) {
           data[currentByte++] = colorBuffer.bgra[t];
         }
+
+        // Now we can go one step forward and
+        // process the next pixel in the image
         currentPixel++;
-        if (currentPixel > pixelCount) {
-          std::cerr << "Too many pixels read" << std::endl;
+        if (currentPixel > entireImagePixelCount) {
+          std::cerr << "Too many pixel read" << std::endl;
           return false;
         }
       }
     } else {
-      chunkHeader -= 127;
-      for (int i{0}; i < chunkHeader; i++) {
-        in.read(reinterpret_cast<char *>(colorBuffer.bgra), bpp);
-        if (!in.good()) {
-          std::cerr << "An error occured while reading the header" << std::endl;
-          return false;
-        }
+      runCount -= 127; // Because the last bit was just an indicator (flag) and
+                       // should not be present in the runCount
+      in.read(reinterpret_cast<char *>(colorBuffer.bgra), bpp);
+      if (!in.good()) {
+        std::cerr << "An error occured while reading the RLE run" << std::endl;
+        return false;
+      }
+      for (int i{0}; i < runCount; i++) {
         for (int t{0}; t < bpp; t++) {
-          data[currentPixel++] = colorBuffer.bgra[t];
+          data[currentByte++] = colorBuffer.bgra[t];
         }
         currentPixel++;
-        if (currentPixel > pixelCount) {
-          std::cerr << "Too many pixels read" << std::endl;
+        if (currentPixel > entireImagePixelCount) {
+          std::cerr << "Too many pixel read" << std::endl;
           return false;
         }
       }
     }
-  } while (currentPixel < pixelCount);
+  } while (currentPixel < entireImagePixelCount);
 
   return true;
 }

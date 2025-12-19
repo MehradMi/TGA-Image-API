@@ -4,7 +4,7 @@
 #include <vector>
 
 #pragma pack(push, 1)
-// TGA Header Structure -> It is 18 bytes long
+// TGA Header Structure -> It is 18 bytes long and 12 properties inside it.
 struct TGAHeader {
   // Image ID: 1 Byte
   std::uint8_t idlength = 0; // The length of the a "string"
