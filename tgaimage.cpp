@@ -173,7 +173,7 @@ bool TGAImage::write_tga_file(const std::string filename, const bool vflip,
     out.write(reinterpret_cast<const char *>(data.data()), w * h * bpp);
     if (!out.good())
       goto err;
-  } else if (!unload_rle_data(out))
+  } else if (!compress_rle_unencoded_data(out))
     goto err;
 
   out.write(reinterpret_cast<const char *>(footer.developer_area_ref),
@@ -197,45 +197,48 @@ err:
   return false;
 }
 
-bool TGAImage::unload_rle_data(std::ofstream &out) const {
-  const std::uint8_t maxChunkLength = 128;
-  size_t entireImagePixelCount = w * h;
-  size_t currentPixel = 0;
+bool TGAImage::compress_rle_unencoded_data(std::ofstream &out) const {
+  const std::uint8_t max_chunk_length = 128;
+  size_t entire_image_pixel_count = w * h;
+  size_t current_pixel = 0;
 
-  // Process and unload each pixel until we are
-  // out of pixels in the image
-  while (currentPixel < entireImagePixelCount) {
-    size_t chunkStartPos = currentPixel * bpp;
-    size_t currentByte = currentPixel * bpp;
-    std::uint8_t runLength = 1;
-    bool isRawLiteral = true;
+  while (current_pixel < entire_image_pixel_count) {
+    size_t chunk_start_pos = current_pixel * bpp;
+    size_t current_byte = current_pixel * bpp;
+    std::uint8_t run_count = 1;
+    bool isLiteral = true;
 
-    while (currentPixel + runLength < entireImagePixelCount &&
-           runLength < maxChunkLength) {
-      bool samePixels = true;
-      for (int t{0}; samePixels && t < bpp; t++) {
-        std::uint8_t currentPixelData = data[currentByte + t];
-        std::uint8_t nextPixelData = data[currentByte + t + bpp];
-        samePixels = (currentPixelData == nextPixelData);
+    while (current_pixel + run_count < entire_image_pixel_count &&
+           run_count < max_chunk_length) {
+      bool equal_pixels = true;
+      for (int pixel_channel{0}; equal_pixels && pixel_channel < bpp;
+           pixel_channel++) {
+        std::uint8_t current_pixel_channel = data[current_byte + pixel_channel];
+        std::uint8_t next_pixel_channel =
+            data[current_byte + bpp + pixel_channel];
+        equal_pixels = (current_pixel_channel == next_pixel_channel);
       }
-      currentByte += bpp;
-      if (runLength == 1)
-        isRawLiteral = !samePixels;
-      if (isRawLiteral && samePixels) {
-        runLength--;
+      current_byte += bpp;
+
+      if (run_count == 1)
+        isLiteral = !equal_pixels;
+
+      if (isLiteral && !equal_pixels) {
+        run_count--;
         break;
       }
-      if (!isRawLiteral && !samePixels) {
+      if (!isLiteral && !equal_pixels) {
         break;
       }
-      runLength++;
+      run_count++;
     }
-    currentPixel += runLength;
-    out.put(isRawLiteral ? runLength - 1 : runLength + 127);
+    current_pixel += run_count;
+    out.put(isLiteral ? run_count - 1 : run_count + 127);
     if (!out.good())
       return false;
-    out.write(reinterpret_cast<const char *>(data.data() + chunkStartPos),
-              (isRawLiteral ? runLength * bpp : bpp));
+
+    out.write(reinterpret_cast<const char *>(data.data() + chunk_start_pos),
+              (isLiteral ? run_count * bpp : bpp));
     if (!out.good())
       return false;
   }

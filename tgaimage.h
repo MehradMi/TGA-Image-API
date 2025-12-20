@@ -1,6 +1,7 @@
 #pragma once
 #include <cstdint>
 #include <fstream>
+#include <ostream>
 #include <vector>
 
 #pragma pack(push, 1)
@@ -84,7 +85,7 @@ struct TGAImage {
 
 private:
   bool decompress_rle_encoded_data(std::ifstream &in);
-  bool unload_rle_data(std::ofstream &out) const;
+  bool compress_rle_unencoded_data(std::ofstream &out) const;
 
   // Both width (w) and height (h) are measured by "pixels" in this program
   int w = 0, h = 0;
