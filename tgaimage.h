@@ -83,7 +83,7 @@ struct TGAImage {
   int height() const;
 
 private:
-  bool load_rle_data(std::ifstream &in);
+  bool decompress_rle_encoded_data(std::ifstream &in);
   bool unload_rle_data(std::ofstream &out) const;
 
   // Both width (w) and height (h) are measured by "pixels" in this program

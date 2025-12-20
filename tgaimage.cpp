@@ -60,7 +60,7 @@ bool TGAImage::read_tga_file(const std::string filename) {
     }
   } else if (header.imagetypecode == COMPRESSED_RGB_IMAGE_TYPE_CODE ||
              header.imagetypecode == COMPRESSED_GRAY_IMAGE_TYPE_CODE) {
-    if (!load_rle_data(in)) {
+    if (!decompress_rle_encoded_data(in)) {
       std::cerr << "An error occured while reading data" << std::endl;
       return false;
     }
@@ -79,71 +79,69 @@ bool TGAImage::read_tga_file(const std::string filename) {
   return true;
 }
 
-bool TGAImage::load_rle_data(std::ifstream &in) {
-  size_t entireImagePixelCount = w * h;
-  size_t currentPixel = 0;
-  size_t currentByte = 0;
-  TGAColor colorBuffer;
+bool TGAImage::decompress_rle_encoded_data(std::ifstream &in) {
+  size_t entire_image_pixel_count = w * h;
+  size_t current_pixel = 0;
+  size_t current_byte = 0;
+  std::uint8_t run_count;
+  TGAColor color_buffer;
 
   do {
-    std::uint8_t runCount = 0;
-    runCount = in.get(); // Read a single character (one byte) from the
-                         // input file stream at a time
+    std::uint8_t header_chunk = 0;
+    header_chunk = in.get();
+
     if (!in.good()) {
-      std::cerr << "Ar error occured while reading the data" << std::endl;
+      std::cerr << "An error occured while reading header_chunk from the "
+                   "encoded input "
+                   "file stream"
+                << std::endl;
       return false;
     }
 
-    // if runCount is less than 128, it means
-    // that the most significant bit (bit-7) was set to 0
-    // and that indicates a "literal run". However, if it is greater
-    // than 128, then it means the bit-7 was set to 1, to indicate
-    // an "encoded run".
-    if (runCount < 128) {
-      runCount++;
-      for (int i{0}; i < runCount; i++) {
-        in.read(reinterpret_cast<char *>(colorBuffer.bgra), bpp);
+    if (header_chunk < 128) {
+      run_count = ++header_chunk;
+      for (int i{0}; i < run_count; i++) {
+        in.read(reinterpret_cast<char *>(color_buffer.bgra), bpp);
         if (!in.good()) {
-          std::cerr << "An error occured while reading the RLE run"
+          std::cerr << "An error occured while reading the literal run from "
+                       "the input file stream"
                     << std::endl;
           return false;
         }
-        // Now, take the values stored in the colorBuffer
-        // and put them in the "data" vector contiguously
-        // as this has the effect of forming the image with
-        // correct colors
-        for (int t{0}; t < bpp; t++) {
-          data[currentByte++] = colorBuffer.bgra[t];
+
+        for (int pixel_channel{0}; pixel_channel < bpp; pixel_channel++) {
+          data[current_byte++] = color_buffer.bgra[pixel_channel];
         }
 
-        // Now we can go one step forward and
-        // process the next pixel in the image
-        currentPixel++;
-        if (currentPixel > entireImagePixelCount) {
+        current_pixel++;
+        if (current_pixel > entire_image_pixel_count) {
           std::cerr << "Too many pixel read" << std::endl;
           return false;
         }
       }
     } else {
-      runCount -= 127; // Because the last bit was just an indicator (flag) and
-                       // should not be present in the runCount
-      in.read(reinterpret_cast<char *>(colorBuffer.bgra), bpp);
+      run_count = header_chunk - 127;
+
+      in.read(reinterpret_cast<char *>(color_buffer.bgra), bpp);
       if (!in.good()) {
-        std::cerr << "An error occured while reading the RLE run" << std::endl;
+        std::cerr << "An error occured while reading the encoded run from the "
+                     "input file stream"
+                  << std::endl;
         return false;
       }
-      for (int i{0}; i < runCount; i++) {
-        for (int t{0}; t < bpp; t++) {
-          data[currentByte++] = colorBuffer.bgra[t];
+
+      for (int i{0}; i < run_count; i++) {
+        for (int pixel_channel{0}; pixel_channel < bpp; pixel_channel++) {
+          data[current_byte++] = color_buffer.bgra[pixel_channel];
         }
-        currentPixel++;
-        if (currentPixel > entireImagePixelCount) {
+        current_pixel++;
+        if (current_pixel > entire_image_pixel_count) {
           std::cerr << "Too many pixel read" << std::endl;
           return false;
         }
       }
     }
-  } while (currentPixel < entireImagePixelCount);
+  } while (current_pixel < entire_image_pixel_count);
 
   return true;
 }
