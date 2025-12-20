@@ -99,8 +99,9 @@ bool TGAImage::decompress_rle_encoded_data(std::ifstream &in) {
     }
 
     if (header_chunk < 128) {
-      run_count = ++header_chunk;
-      for (int i{0}; i < run_count; i++) {
+      // run_count = ++header_chunk;
+      header_chunk++;
+      for (int i{0}; i < header_chunk; i++) {
         in.read(reinterpret_cast<char *>(color_buffer.bgra), bpp);
         if (!in.good()) {
           std::cerr << "An error occured while reading the literal run from "
@@ -120,7 +121,7 @@ bool TGAImage::decompress_rle_encoded_data(std::ifstream &in) {
         }
       }
     } else {
-      run_count = header_chunk - 127;
+      header_chunk = header_chunk - 127;
 
       in.read(reinterpret_cast<char *>(color_buffer.bgra), bpp);
       if (!in.good()) {
@@ -130,7 +131,7 @@ bool TGAImage::decompress_rle_encoded_data(std::ifstream &in) {
         return false;
       }
 
-      for (int i{0}; i < run_count; i++) {
+      for (int i{0}; i < header_chunk; i++) {
         for (int pixel_channel{0}; pixel_channel < bpp; pixel_channel++) {
           data[current_byte++] = color_buffer.bgra[pixel_channel];
         }
@@ -223,7 +224,7 @@ bool TGAImage::compress_rle_unencoded_data(std::ofstream &out) const {
       if (run_count == 1)
         isLiteral = !equal_pixels;
 
-      if (isLiteral && !equal_pixels) {
+      if (isLiteral && equal_pixels) {
         run_count--;
         break;
       }
