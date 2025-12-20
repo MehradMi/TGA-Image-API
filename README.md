@@ -97,10 +97,6 @@ This library serves as the image handling foundation for implementing the [tinyr
 
 The included `main_test.cpp` demonstrates basic usage by creating a 64x64 image with three white pixels at specified coordinates.
 
-## License
-
-[Add your license here]
-
 ## Future Enhancements
 
 - Line drawing algorithms (Bresenham)
