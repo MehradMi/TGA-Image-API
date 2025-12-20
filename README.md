@@ -43,7 +43,7 @@ TGAColor pixel = loaded_image.get(50, 50);
 ```
 
 ### Example Output Image
-![frame.tga]
+![Example Output Image](frame.png)
 
 ## API Reference
 
